@@ -2,7 +2,7 @@
 # @Author: chenkexing
 # @Date:   2021-04-28 16:52:07
 # @Last Modified by:   ckxkexing
-# @Last Modified time: 2021-04-29 11:52:35
+# @Last Modified time: 2021-04-29 12:29:23
 
 
 import json
@@ -10,8 +10,9 @@ import datetime
 
 class Developer(object):
 
-    def __init__(self, login, id):
+    def __init__(self, name, login, id):
         # user identity
+        self.name = name
         self.login = login
         self.id    = id
 
@@ -65,7 +66,7 @@ def main():
                     flag = 0
                     break
             if flag == 1:
-                tmp = Developer(data["author"]["login"], data["author"]["id"])
+                tmp = Developer( data["commit"]["author"]["name"],data["author"]["login"], data["author"]["id"])
                 tmp.first_commit = data["commit"]["author"]["date"]
                 tmp.last_commit  = data["commit"]["author"]["date"]
                 tmp.email = data["commit"]["author"]["email"]
@@ -96,7 +97,7 @@ def main():
                     flag = 0
                     break
             if flag == 1:
-                tmp = Developer(data["committer"]["login"], data["committer"]["id"])
+                tmp = Developer(data["commit"]["committer"]["name"],data["committer"]["login"], data["committer"]["id"])
                 tmp.first_commit = data["commit"]["committer"]["date"]
                 tmp.last_commit  = data["commit"]["committer"]["date"]
                 tmp.email = data["commit"]["committer"]["email"]
@@ -104,9 +105,25 @@ def main():
                 users.append(tmp)
 # committer end
 
-
-
-    for i in range(5):
+# 将commit中的co_patner 也添加到users中
+    with open("apache_spark/pick_prople_from_apache_spark_commits.json", 'r') as f:
+        json_data = json.load(f)
+        for data in json_data:
+            for cp in data["co_patner"]:
+                flag = 1
+                for exist_user in users:
+                    if cp['email'] == exist_user.email:
+                        flag = 0
+                        break
+                if flag == 1:
+                    tmp = Developer(cp["name"], None, None)
+                    tmp.email = cp['email']
+                    users.append(tmp)
+# co_patner 处理结束
+    
+    for i in range(-2,-1):
         print(json.dumps(users[i].__dict__ ,indent=2))
+
+    
 if __name__ == '__main__':
     main()
