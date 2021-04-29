@@ -2,12 +2,14 @@
 # @Author: chenkexing
 # @Date:   2021-04-28 16:52:07
 # @Last Modified by:   ckxkexing
-# @Last Modified time: 2021-04-29 14:26:40
+# @Last Modified time: 2021-04-30 00:05:52
 
 
 import json
 import datetime
 import time
+from pa_utils import tool_api
+
 class Developer(object):
 
     def __init__(self, name, login, id):
@@ -55,6 +57,9 @@ def main():
     users = []  # {email, users}
     commit_count = {}
     user_map = {}
+
+    my_tool_api = tool_api("apache", "spark")
+
 # 处理出所有author信息
     with open("apache_spark/apache_spark_commits.json", 'r') as f:
         json_data = json.load(f)
@@ -138,16 +143,55 @@ def main():
                 tmp.user_issue_count = 1
                 users.append(tmp)
                 user_map[tmp.login] = len(users) - 1
+
+            #统计 assignee 
+
+            for asg_user in data['assignees']:
+                if asg_user['login'] in user_map:
+                    exist_user = users[user_map[cur_user['login']]]
+                    exist_user.is_assignee = 1
+                    if exist_user.first_issue==None or time_change(exist_user.first_issue) > time_change(data['created_at']):
+                        exist_user.first_issue = data['created_at']
+                    if exist_user.last_issue==None or time_change(exist_user.last_issue) < time_change(data['updated_at']):
+                        exist_user.last_issue = data['updated_at']
+                else :
+                    tmp = Developer(None, cur_user["login"], cur_user["id"])
+                    tmp.first_issue = data['created_at']
+                    tmp.last_issue  = data['updated_at']
+                    tmp.is_assignee = 1
+                    users.append(tmp)
+                    user_map[tmp.login] = len(users) - 1
 # issue end
   
 
 # pull start
-# reviewer 需要['review_comments']的获取
+# reviewer 需要['review_comments']的api获取
+# reviewer 
+# 不，只用读取issue_commit,然后判断issus_id 谁不是pull 即可。
 
+# merger 需要等merged_at ！= None 后 通过api获取
+# 好像merger个数不多、甚至merge的pr都不多
+    num_of_pulls = {}
     with open("apache_spark/apache_spark_pulls.json", 'r') as f:
         json_data = json.load(f)
         for data in json_data:
             cur_user = data['user']
+            num_of_pulls[data['number']] = 1
+            if data['merged_at'] != None:
+                actor = my_tool_api.get_merge_actor(data['number'])
+                # print("*" * 20, "merger", "*" * 20)
+                # print(json.dumps(actor, indent=2))
+                # print("*" * 20, "merger", "*" * 20)
+                if actor['login'] in user_map:
+                    exist_user = users[user_map[actor['login']]]    
+                    exist_user.is_merger = 1
+                else:
+                    tmp = Developer(None, actor["login"], actor["id"])
+                    tmp.is_merger = 1
+                    users.append(tmp)
+                    user_map[tmp.login] = len(users) - 1
+                # print(json.dumps(data, indent=2))
+
             if cur_user['login'] in user_map:
                 exist_user = users[user_map[cur_user['login']]]
                 exist_user.user_pulls_count += 1
@@ -163,9 +207,37 @@ def main():
                 users.append(tmp)
                 user_map[tmp.login] = len(users) - 1
 # pull end
+    
+# 处理 issue_comment(is_cm)
+#   
+    num_of_is_cm = {}
+    with open('apache_spark/apache_spark_issues_comments.json') as f:
+        json_data = json.load(f)
+        for data in json_data:
+            if data['id'] in num_of_is_cm:
+                continue
+            num_of_is_cm[data['id']] = 1
+            issue_id = int(data['issue_url'].split('/')[-1])
+            cur_user = data['user']
+            if issue_id in num_of_pulls:
+                if cur_user['login'] in user_map:
+                    exist_user = users[user_map[cur_user['login']]]
+                    exist_user.is_reviewer = 1
+                else :
+                    tmp = Developer(None, cur_user["login"], cur_user["id"])
+                    tmp.is_reviewer = 1
+                    users.append(tmp)
+                    user_map[tmp.login] = len(users) - 1
+
 
     for i in range(0,2):
         print(json.dumps(users[i].__dict__ ,indent=2))
+
+    with open('apache_spark/users_features.json', 'w+') as f:
+        res = []
+        for user in users:
+            res.append(user.__dict__)
+        json.dump(res, f, indent=2)
 
     print("用时:", time.time() - start_time, 's')
 if __name__ == '__main__':
