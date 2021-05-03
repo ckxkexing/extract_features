@@ -2,7 +2,7 @@
 # @Author: chenkexing
 # @Date:   2021-04-28 16:52:07
 # @Last Modified by:   ckxkexing
-# @Last Modified time: 2021-04-30 00:05:52
+# @Last Modified time: 2021-05-03 18:51:50
 
 
 import json
@@ -169,24 +169,20 @@ def main():
 # reviewer 
 # 不，只用读取issue_commit,然后判断issus_id 谁不是pull 即可。
 
-# merger 需要等merged_at ！= None 后 通过api获取
-# 好像merger个数不多、甚至merge的pr都不多
+# merge 需要先由merge_util处理，pull 中就会有merged_by属性，0表示无，否则为用户id
     num_of_pulls = {}
     with open("apache_spark/apache_spark_pulls.json", 'r') as f:
         json_data = json.load(f)
         for data in json_data:
             cur_user = data['user']
             num_of_pulls[data['number']] = 1
-            if data['merged_at'] != None:
-                actor = my_tool_api.get_merge_actor(data['number'])
-                # print("*" * 20, "merger", "*" * 20)
-                # print(json.dumps(actor, indent=2))
-                # print("*" * 20, "merger", "*" * 20)
-                if actor['login'] in user_map:
-                    exist_user = users[user_map[actor['login']]]    
+            if data['merged_by'] != 0:
+                actor_login = data['merged_by']
+                if actor_login in user_map:
+                    exist_user = users[user_map[actor_login]]    
                     exist_user.is_merger = 1
                 else:
-                    tmp = Developer(None, actor["login"], actor["id"])
+                    tmp = Developer(None, actor_login, None)
                     tmp.is_merger = 1
                     users.append(tmp)
                     user_map[tmp.login] = len(users) - 1
@@ -240,5 +236,7 @@ def main():
         json.dump(res, f, indent=2)
 
     print("用时:", time.time() - start_time, 's')
+# 用时: 20.757726907730103 s
+
 if __name__ == '__main__':
     main()

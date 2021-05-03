@@ -2,7 +2,7 @@
 # @Author: ckxkexing
 # @Date:   2021-04-30 09:29:43
 # @Last Modified by:   ckxkexing
-# @Last Modified time: 2021-04-30 10:40:45
+# @Last Modified time: 2021-05-03 18:53:23
 
 import networkx as nx
 import json
@@ -76,5 +76,6 @@ def main():
         json.dump(users, f, indent=2)
 
     print("用时:", time.time() - start_time, 's')
+    # 用时: 75.33750891685486 s
 if __name__ == '__main__':
     main()
