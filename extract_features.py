@@ -2,7 +2,7 @@
 # @Author: chenkexing
 # @Date:   2021-04-28 16:52:07
 # @Last Modified by:   ckxkexing
-# @Last Modified time: 2021-05-03 18:51:50
+# @Last Modified time: 2021-05-04 10:18:37
 
 
 import json
@@ -176,7 +176,7 @@ def main():
         for data in json_data:
             cur_user = data['user']
             num_of_pulls[data['number']] = 1
-            if data['merged_by'] != 0:
+            if data['merged_by'] != None:
                 actor_login = data['merged_by']
                 if actor_login in user_map:
                     exist_user = users[user_map[actor_login]]    
